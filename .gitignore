@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+coverage
+*.local
+.mypy_cache
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
