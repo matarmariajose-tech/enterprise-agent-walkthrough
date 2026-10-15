@@ -1,6 +1,11 @@
 from functools import lru_cache
 
-from app.adapters.in_memory import InMemoryAudit, InMemoryPayments, InMemoryRetrieval
+from app.adapters.in_memory import (
+    InMemoryActionRepository,
+    InMemoryAudit,
+    InMemoryPayments,
+    InMemoryRetrieval,
+)
 from app.agent.orchestrator import AgentOrchestrator
 from app.domain.models import ExecutionContext, Permission
 from app.services.authorization import AuthorizationService
@@ -26,12 +31,12 @@ def execution_context() -> ExecutionContext:
 
 @lru_cache
 def orchestrator() -> AgentOrchestrator:
-    context = execution_context()
     authorization = AuthorizationService()
     return AgentOrchestrator(
         retrieval=InMemoryRetrieval(),
-        payment_tools=PaymentTools(InMemoryPayments(), authorization, context),
+        payment_tools=PaymentTools(InMemoryPayments(), authorization),
         policy=PolicyEngine(AlertPolicy(version="2026-09", failure_rate_threshold=0.05)),
         authorization=authorization,
         audit=InMemoryAudit(),
+        actions=InMemoryActionRepository(),
     )

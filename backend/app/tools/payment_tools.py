@@ -12,26 +12,24 @@ class PaymentTools:
         self,
         payments: PaymentsPort,
         authorization: AuthorizationService,
-        context: ExecutionContext,
     ) -> None:
         self._payments = payments
         self._authorization = authorization
-        self._context = context
 
-    async def get_failure_summary(
-        self, region: str, window_hours: int
-    ) -> dict[str, int | float]:
-        self._authorization.require(self._context, Permission.PAYMENTS_READ)
-        request = FailureSummaryInput.model_validate(
-            {"region": region, "window_hours": window_hours}
-        )
-        result: FailureSummary = await self._payments.failure_summary(request, self._context)
-        return result.model_dump()
+    def for_context(self, context: ExecutionContext) -> StructuredTool:
+        """Bind identity at request scope; never retain it on the singleton registry."""
 
-    def as_langchain_tools(self) -> list[StructuredTool]:
+        async def get_failure_summary(region: str, window_hours: int) -> dict[str, int | float]:
+            self._authorization.require(context, Permission.PAYMENTS_READ)
+            request = FailureSummaryInput.model_validate(
+                {"region": region, "window_hours": window_hours}
+            )
+            result: FailureSummary = await self._payments.failure_summary(request, context)
+            return result.model_dump()
+
         return [
             StructuredTool.from_function(
-                coroutine=self.get_failure_summary,
+                coroutine=get_failure_summary,
                 name="payments_get_failure_summary",
                 description=(
                     "Return aggregate payment failure statistics for an authorized region and "
@@ -39,4 +37,4 @@ class PaymentTools:
                 ),
                 args_schema=FailureSummaryInput,
             )
-        ]
+        ][0]

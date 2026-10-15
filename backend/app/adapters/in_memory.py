@@ -1,4 +1,7 @@
+import asyncio
+
 from app.domain.models import (
+    ActionProposal,
     Evidence,
     ExecutionContext,
     FailureSummary,
@@ -44,3 +47,23 @@ class InMemoryAudit:
         self, event: str, context: ExecutionContext, payload: dict[str, str]
     ) -> None:
         self.events.append((event, context.trace_id, payload))
+
+
+class InMemoryActionRepository:
+    """Reference adapter with atomic idempotency semantics.
+
+    A production adapter implements the same contract with a unique database
+    constraint on ``idempotency_key`` and a transaction-safe upsert.
+    """
+
+    def __init__(self) -> None:
+        self._items: dict[str, ActionProposal] = {}
+        self._lock = asyncio.Lock()
+
+    async def create_or_get(self, proposal: ActionProposal) -> ActionProposal:
+        async with self._lock:
+            existing = self._items.get(proposal.idempotency_key)
+            if existing is not None:
+                return existing
+            self._items[proposal.idempotency_key] = proposal
+            return proposal

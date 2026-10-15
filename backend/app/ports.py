@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from app.domain.models import (
+    ActionProposal,
     Evidence,
     ExecutionContext,
     FailureSummary,
@@ -26,3 +27,7 @@ class AuditPort(Protocol):
     async def record(
         self, event: str, context: ExecutionContext, payload: dict[str, str]
     ) -> None: ...
+
+
+class ActionRepositoryPort(Protocol):
+    async def create_or_get(self, proposal: ActionProposal) -> ActionProposal: ...

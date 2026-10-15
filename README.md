@@ -13,6 +13,8 @@ An interactive, sanitized architecture case study showing how an ambiguous “en
 - Versioned action state with explicit approval and idempotency
 - Observability as a transversal plane across the full decision path
 - Semantic failure analysis beyond availability and HTTP success
+- Request-scoped identity binding: singleton services never retain tenant context
+- Atomic replay protection through deterministic idempotency keys
 
 ## Run locally
 
@@ -76,6 +78,12 @@ business behavior.
 The included adapters are deterministic and contain synthetic data, so the project can
 run and test without an API key. A production deployment would provide model, identity,
 retrieval, persistence and enterprise API adapters through the same ports.
+
+One subtle boundary is enforced in code: tools are bound to `ExecutionContext` per
+request. The application container may be shared, but subject, tenant and permissions
+never become singleton state. Action proposals are persisted through an idempotent
+repository contract; the reference lock represents the unique constraint and atomic
+upsert required from a production database adapter.
 
 ## Design principles
 

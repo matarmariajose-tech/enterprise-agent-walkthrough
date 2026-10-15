@@ -14,7 +14,7 @@ from app.domain.models import (
     FailureSummary,
     Permission,
 )
-from app.ports import AuditPort, RetrievalPort
+from app.ports import ActionRepositoryPort, AuditPort, RetrievalPort
 from app.services.authorization import AuthorizationService
 from app.services.policy import PolicyEngine
 from app.tools.payment_tools import PaymentTools
@@ -32,6 +32,7 @@ class AgentOrchestrator:
         policy: PolicyEngine,
         authorization: AuthorizationService,
         audit: AuditPort,
+        actions: ActionRepositoryPort,
         *,
         minimum_relevance: float = 0.75,
     ) -> None:
@@ -40,6 +41,7 @@ class AgentOrchestrator:
         self._policy = policy
         self._authorization = authorization
         self._audit = audit
+        self._actions = actions
         self._minimum_relevance = minimum_relevance
         self.chain: Runnable[
             tuple[AgentRequest, ExecutionContext], AgentResponse
@@ -49,17 +51,17 @@ class AgentOrchestrator:
         request, context = payload
         with tracer.start_as_current_span("agent.execute") as span:
             span.set_attribute("agent.trace_id", context.trace_id)
-            evidence = await self._retrieval.search(request.query, context)
+            with tracer.start_as_current_span("retrieval.search"):
+                evidence = await self._retrieval.search(request.query, context)
             relevant = [item for item in evidence if item.relevance >= self._minimum_relevance]
             if not relevant:
                 raise InsufficientEvidenceError(
                     "No authorized evidence met the relevance threshold"
                 )
 
-            tool = self._payment_tools.as_langchain_tools()[0]
-            if tool is None:  # defensive guard for future dynamic registries
-                raise RuntimeError("Required payment capability is unavailable")
-            raw_summary = await tool.ainvoke({"region": request.region, "window_hours": 24})
+            tool = self._payment_tools.for_context(context)
+            with tracer.start_as_current_span("tool.payments_get_failure_summary"):
+                raw_summary = await tool.ainvoke({"region": request.region, "window_hours": 24})
             summary = FailureSummary.model_validate(raw_summary)
 
             action: ActionProposal | None = None
@@ -68,7 +70,7 @@ class AgentOrchestrator:
                 digest = hashlib.sha256(
                     f"{context.tenant}:{request.correlation_id}:payment-alert".encode()
                 ).hexdigest()
-                action = ActionProposal(
+                proposal = ActionProposal(
                     type="publish_operational_alert",
                     idempotency_key=digest,
                     payload={
@@ -77,6 +79,7 @@ class AgentOrchestrator:
                         "failure_rate": f"{summary.failure_rate:.4f}",
                     },
                 )
+                action = await self._actions.create_or_get(proposal)
 
             await self._audit.record(
                 "agent.request.completed",
