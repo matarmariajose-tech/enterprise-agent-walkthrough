@@ -97,4 +97,10 @@ This case study demonstrates boundaries, not a deployed enterprise agent. State 
 
 Production identity, document-level retrieval controls, a model, MCP transport, persistent state, external execution and telemetry export are extension points described in [Architecture](docs/architecture.md). GitHub Pages publishes only the static walkthrough; CI checks the frontend and backend separately.
 
+## Publish the walkthrough
+
+Enable Pages once in the repository settings: **Settings → Pages → Build and deployment → Source → GitHub Actions**. Creating the Pages site requires repository administration access; the workflow token is used only to build and deploy the existing site.
+
+Then run **Actions → Deploy GitHub Pages → Run workflow** on `main`. Later pushes to `main` trigger deployment automatically. The public URL is `https://matarmariajose-tech.github.io/enterprise-agent-walkthrough/` after a successful deployment.
+
 MIT license. See [LICENSE](LICENSE).
