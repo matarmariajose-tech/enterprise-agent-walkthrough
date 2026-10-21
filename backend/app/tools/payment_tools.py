@@ -24,17 +24,16 @@ class PaymentTools:
             request = FailureSummaryInput.model_validate(
                 {"region": region, "window_hours": window_hours}
             )
+            self._authorization.require_region(context, request.region)
             result: FailureSummary = await self._payments.failure_summary(request, context)
             return result.model_dump()
 
-        return [
-            StructuredTool.from_function(
-                coroutine=get_failure_summary,
-                name="payments_get_failure_summary",
-                description=(
-                    "Return aggregate payment failure statistics for an authorized region and "
-                    "bounded time window. This tool is read-only and never exposes customer data."
-                ),
-                args_schema=FailureSummaryInput,
-            )
-        ][0]
+        return StructuredTool.from_function(
+            coroutine=get_failure_summary,
+            name="payments_get_failure_summary",
+            description=(
+                "Return aggregate payment failure statistics for an authorized region and "
+                "bounded time window. This tool is read-only and never exposes customer data."
+            ),
+            args_schema=FailureSummaryInput,
+        )

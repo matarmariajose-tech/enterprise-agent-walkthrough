@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 
 from app.domain.models import FailureSummary
@@ -7,6 +8,15 @@ from app.domain.models import FailureSummary
 class AlertPolicy:
     version: str
     failure_rate_threshold: float
+
+    def __post_init__(self) -> None:
+        if not self.version.strip():
+            raise ValueError("Policy version is required")
+        if (
+            not math.isfinite(self.failure_rate_threshold)
+            or not 0 <= self.failure_rate_threshold <= 1
+        ):
+            raise ValueError("Policy threshold must be between zero and one")
 
 
 class PolicyEngine:

@@ -11,7 +11,7 @@ router = APIRouter(prefix="/v1")
 
 @router.get("/health", status_code=status.HTTP_200_OK)
 async def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "mode": "demo"}
 
 
 @router.post("/agent/requests", response_model=AgentResponse)

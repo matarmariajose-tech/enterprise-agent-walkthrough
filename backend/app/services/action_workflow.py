@@ -21,4 +21,6 @@ class ActionWorkflow:
             raise InvalidTransitionError("Stale action version")
         if target not in self._transitions[proposal.status]:
             raise InvalidTransitionError(f"Invalid transition: {proposal.status} -> {target}")
-        return proposal.model_copy(update={"status": target, "version": proposal.version + 1})
+        return proposal.model_copy(
+            update={"status": target, "version": proposal.version + 1}, deep=True
+        )

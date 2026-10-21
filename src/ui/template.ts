@@ -14,15 +14,15 @@ export function renderApp(): string {
   return `
     <header class="header">
       <div class="brand"><div class="mark">AP</div><div><h1>Enterprise Agent Runtime</h1><p>Interactive architecture walkthrough · sanitized reconstruction</p></div></div>
-      <div class="badges"><span>ENV: DEMO</span><span>TRACE: ENABLED</span><span class="safe">CLIENT DATA: NONE</span></div>
+      <div class="badges"><span>ENV: DEMO</span><span>TRACE: SIMULATED</span><span class="safe">CLIENT DATA: NONE</span></div>
     </header>
     <main class="shell">
       <nav class="nav">
         <div class="tabs">
-          <button class="tab active" data-view="discovery">1. Discovery</button>
-          <button class="tab" data-view="architecture">2. Architecture</button>
-          <button class="tab" data-view="execution">3. Execution</button>
-          <button class="tab" data-view="incident">4. Failure analysis</button>
+          <button class="tab active" aria-pressed="true" data-view="discovery">1. Discovery</button>
+          <button class="tab" aria-pressed="false" data-view="architecture">2. Architecture</button>
+          <button class="tab" aria-pressed="false" data-view="execution">3. Execution</button>
+          <button class="tab" aria-pressed="false" data-view="incident">4. Failure analysis</button>
         </div>
         <div class="tour-controls"><button data-action="reset-tour">Reset</button><button class="primary" data-action="next-tour">Start guided path</button></div>
       </nav>
@@ -42,7 +42,7 @@ export function renderApp(): string {
       </section>
 
       <section class="view" data-view-panel="architecture">
-        <div class="page-head"><span>02 · Runtime architecture</span><h2>Separate reasoning, control, execution and state</h2><p>Observability and state are transversal planes. They are intentionally outside the synchronous decision path.</p></div>
+        <div class="page-head"><span>02 · Reference architecture</span><h2>Separate reasoning, control, execution and state</h2><p>Target architecture: observability and state span the decision path. The Python reference API implements a deterministic subset with in-memory adapters.</p></div>
         <div class="architecture">
           <div class="request-path">
             ${node('identity', 'Control', 'OIDC / RBAC', 'subject · tenant · resource scope', 'control')}
@@ -60,10 +60,10 @@ export function renderApp(): string {
       </section>
 
       <section class="view" data-view-panel="execution">
-        <div class="page-head"><span>03 · Execution trace</span><h2>Evidence-backed analysis with a controlled side effect</h2><p>The request is synthetic. Execute it to inspect the complete runtime path.</p></div>
+        <div class="page-head"><span>03 · Execution trace</span><h2>Inspect a proposed action without executing a side effect</h2><p>This browser animation uses fixed example data. It does not call the Python API, a model or an external system.</p></div>
         <div class="execution-grid">
-          <article class="card"><header>Request envelope</header><div class="body"><dl><div><dt>Subject</dt><dd>user:ops_manager</dd></div><div><dt>Scope</dt><dd>region:LATAM</dd></div><div><dt>Trace</dt><dd>demo_8f21</dd></div><div><dt>Policy</dt><dd>explicit_approval</dd></div></dl><blockquote>Analyze failed payment activity from the last 24 hours and prepare an alert if the documented threshold was exceeded.</blockquote><button class="execute" data-action="execute">Execute request</button></div></article>
-          <article class="card"><header>Distributed trace <span data-role="trace-status">idle</span></header><div class="trace-list">${spans}</div><div class="result" data-role="result"><span><small>Finding</small><strong>Threshold exceeded</strong></span><span><small>Evidence</small><strong>Policy + API aggregate</strong></span><span><small>Action</small><strong>Proposed · awaiting approval</strong></span></div></article>
+          <article class="card"><header>Request envelope</header><div class="body"><dl><div><dt>Subject</dt><dd>user:ops_manager</dd></div><div><dt>Scope</dt><dd>region:LATAM</dd></div><div><dt>Trace</dt><dd>demo_8f21</dd></div><div><dt>Policy</dt><dd>explicit_approval</dd></div></dl><blockquote>Analyze failed payment activity from the last 24 hours and prepare an alert if the documented threshold was exceeded.</blockquote><button class="execute" data-action="execute">Run simulation</button></div></article>
+          <article class="card"><header>Simulated trace <span data-role="trace-status" role="status" aria-live="polite">idle</span></header><div class="trace-list">${spans}</div><div class="result" data-role="result"><span><small>Finding</small><strong>Threshold exceeded</strong></span><span><small>Evidence</small><strong>Policy + API aggregate</strong></span><span><small>Action</small><strong>Proposed · awaiting approval</strong></span></div></article>
         </div>
       </section>
 
@@ -74,14 +74,14 @@ export function renderApp(): string {
           <button class="incident amber" data-detail="incident-diagnosis" data-target="incident-diagnosis"><b>Diagnosis</b><strong>Reconstruct the decision path</strong><small>Inspect ACLs, chunks, routing, arguments, API result and evidence.</small></button><i>→</i>
           <button class="incident green" data-detail="incident-fix" data-target="incident-fix"><b>Remediation</b><strong>Constrain every boundary</strong><small>Map each failure class to a control and verification method.</small></button>
         </div>
-        <table><thead><tr><th>Boundary</th><th>Failure</th><th>Control</th><th>Verification</th></tr></thead><tbody>
+        <div class="table-scroll"><table><thead><tr><th>Boundary</th><th>Failure</th><th>Control</th><th>Verification</th></tr></thead><tbody>
           <tr><td>Retrieval</td><td>Cross-scope or weak chunks</td><td>ACL before ranking, threshold, provenance</td><td>Retrieval evaluation set</td></tr>
           <tr><td>Routing</td><td>Overlapping capabilities</td><td>Narrow MCP tools</td><td>Tool-selection matrix</td></tr>
           <tr><td>Contracts</td><td>Invalid arguments</td><td>Typed schemas and bounds</td><td>Negative-path tests</td></tr>
           <tr><td>Side effects</td><td>Duplicate action</td><td>State machine and idempotency</td><td>Replay and timeout tests</td></tr>
-        </tbody></table>
+        </tbody></table></div>
       </section>
     </main>
-    <dialog class="modal" data-role="modal"><header><div><span data-role="modal-category"></span><h3 data-role="modal-title"></h3></div><button data-action="close-modal">×</button></header><div class="modal-grid"><section><h4>What I identified</h4><p data-role="modal-observation"></p><h4>Runtime contract</h4><dl><dt>Input</dt><dd data-role="modal-input"></dd><dt>Output</dt><dd data-role="modal-output"></dd></dl></section><section><h4>Design decision</h4><p data-role="modal-decision"></p><h4>Failure behavior</h4><p data-role="modal-failure"></p><aside data-role="modal-signal"></aside></section></div></dialog>
+    <dialog class="modal" data-role="modal" aria-labelledby="detail-title"><header><div><span data-role="modal-category"></span><h3 id="detail-title" data-role="modal-title"></h3></div><button data-action="close-modal" aria-label="Close details">×</button></header><div class="modal-grid"><section><h4>What I identified</h4><p data-role="modal-observation"></p><h4>Runtime contract</h4><dl><dt>Input</dt><dd data-role="modal-input"></dd><dt>Output</dt><dd data-role="modal-output"></dd></dl></section><section><h4>Design decision</h4><p data-role="modal-decision"></p><h4>Failure behavior</h4><p data-role="modal-failure"></p><aside data-role="modal-signal"></aside></section></div></dialog>
   `;
 }

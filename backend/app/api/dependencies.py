@@ -1,5 +1,7 @@
 from functools import lru_cache
 
+from fastapi import Request
+
 from app.adapters.in_memory import (
     InMemoryActionRepository,
     InMemoryAudit,
@@ -13,11 +15,10 @@ from app.services.policy import AlertPolicy, PolicyEngine
 from app.tools.payment_tools import PaymentTools
 
 
-def execution_context() -> ExecutionContext:
-    # A production adapter would validate an OIDC token and tenant claims here.
+def execution_context(request: Request) -> ExecutionContext:
     return ExecutionContext(
         subject="user:ops_manager",
-        tenant="LATAM",
+        tenant="demo:company",
         permissions=frozenset(
             {
                 Permission.KNOWLEDGE_INTERNAL,
@@ -25,7 +26,8 @@ def execution_context() -> ExecutionContext:
                 Permission.ALERTS_PREPARE,
             }
         ),
-        trace_id="demo_8f21",
+        trace_id=request.state.trace_id,
+        allowed_regions=frozenset({"LATAM"}),
     )
 
 

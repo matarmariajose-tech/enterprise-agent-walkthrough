@@ -1,41 +1,33 @@
-# Enterprise Agent Runtime Walkthrough
+# Enterprise Agent Walkthrough
 
-An interactive, sanitized architecture case study showing how an ambiguous “enterprise chatbot” request can be translated into a governed agent runtime with explicit trust boundaries, typed capabilities, observable execution and controlled side effects.
+An interactive architecture case study with a small Python API demonstrating authorization, scoped tools, proposal idempotency and audit traces.
 
-> This repository contains fictional data and a reconstructed reference architecture. It does not contain client code, credentials, internal documents or production configuration.
+[Open the walkthrough](https://matarmariajose-tech.github.io/enterprise-agent-walkthrough/)
 
-## What this demonstrates
+The repository uses fictional data. It contains no client code, credentials or production configuration.
 
-- Discovery with nontechnical stakeholders and translation into engineering requirements
-- Permission-aware retrieval with evidence provenance
-- MCP tools as typed capability boundaries
-- Deterministic authorization, validation and side-effect policy
-- Versioned action state with explicit approval and idempotency
-- Observability as a transversal plane across the full decision path
-- Semantic failure analysis beyond availability and HTTP success
-- Request-scoped identity binding: singleton services never retain tenant context
-- Atomic replay protection through deterministic idempotency keys
+## What runs
 
-## Run locally
+| Component | Implemented behavior |
+| --- | --- |
+| Browser walkthrough | Architecture views, guided tour, details and a repeatable trace simulation |
+| FastAPI reference | Validates a request, checks permissions and region scope, reads synthetic evidence and payment statistics, and proposes an alert when the policy threshold is reached |
+| Action repository | Atomic proposal creation, conflict detection and tenant/user isolation within one process |
+| Action state machine | Pure, version-checked transitions; no approval endpoint or external action executor |
+| Audit and tracing | In-memory request events and OpenTelemetry API spans; no telemetry exporter configured |
+
+The browser simulation runs independently from the Python API. It does not call a model or perform external operations. The backend uses LangChain Core for a runnable and a typed tool; it does not implement an MCP server or model-based routing.
+
+## Run the walkthrough
+
+Requires Node.js 22 or newer.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Run the Python API:
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -e '.[dev]'
-uvicorn app.main:app --reload
-```
-
-The backend exposes interactive OpenAPI documentation at `http://localhost:8000/docs`.
-
-Quality checks:
+The development server prints its local URL. To verify the frontend:
 
 ```bash
 npm run lint
@@ -43,56 +35,66 @@ npm test
 npm run build
 ```
 
-## Architecture
+The frontend suite covers the action state machine, repeated simulation runs, concurrent clicks and recovery after rendering errors.
 
-The runtime deliberately separates four concerns:
+## Run the reference API
 
-1. **Reasoning** — intent interpretation and capability selection.
-2. **Control** — identity, authorization, evidence policy and side-effect decisions.
-3. **Execution** — typed MCP capabilities and enterprise APIs.
-4. **State and telemetry** — action versions, evidence references, audit events and correlated traces.
+Requires Python 3.12 or newer. From the repository root:
 
-See [Architecture](docs/architecture.md) and the [ADRs](docs/adr) for the reasoning behind these boundaries.
-
-## Project structure
-
-```text
-src/
-  data/       Walkthrough content, trace fixtures and tour configuration
-  domain/     Framework-independent types and action state machine
-  ui/         Rendering and isolated interaction controllers
-tests/        Domain-level behavior tests
-docs/         Architecture and decision records
-backend/
-  app/         FastAPI, LangChain orchestration, domain services and adapters
-  tests/       Authorization, state-machine and orchestration behavior tests
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+uvicorn app.main:app --reload
 ```
 
-## Python and LangChain
+OpenAPI documentation: `http://localhost:8000/docs`.
 
-The backend uses LangChain Core only at the orchestration boundary. Domain policy,
-authorization, schemas, action state and integrations remain ordinary Python services.
-This keeps the model layer replaceable and prevents framework abstractions from owning
-business behavior.
+```bash
+curl http://localhost:8000/v1/health
+curl -X POST http://localhost:8000/v1/agent/requests \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Review failed payments","region":"LATAM"}'
+```
 
-The included adapters are deterministic and contain synthetic data, so the project can
-run and test without an API key. A production deployment would provide model, identity,
-retrieval, persistence and enterprise API adapters through the same ports.
+The API deliberately uses a demo identity with LATAM access. Headers cannot grant permissions or change that identity. This is a reference adapter, not production authentication; do not connect private data without replacing it with a validated identity provider.
 
-One subtle boundary is enforced in code: tools are bound to `ExecutionContext` per
-request. The application container may be shared, but subject, tenant and permissions
-never become singleton state. Action proposals are persisted through an idempotent
-repository contract; the reference lock represents the unique constraint and atomic
-upsert required from a production database adapter.
+From `backend/`, verify the API and domain:
 
-## Design principles
+```bash
+ruff check .
+mypy app
+pytest
+```
 
-- Generated values are treated as untrusted input.
-- Identity and access scope are resolved before retrieval and tool discovery.
-- Existing systems remain authoritative for business data and domain rules.
-- Model output cannot directly commit a sensitive side effect.
-- Every semantic failure class maps to an explicit control and verification method.
+The backend suite covers HTTP contracts, permissions, region scope, evidence thresholds, concurrent replays, payload conflicts, identity isolation and inconsistent statistics.
 
-## License
+## Request identity and retries
 
-MIT
+- `correlation_id` identifies a logical request. Send the same UUID to replay it; omitting it creates a new request identifier.
+- Proposal keys include tenant, subject and correlation ID. Reusing that key with different request content raises HTTP `409` when creating or retrieving a proposal.
+- `trace_id` identifies an individual HTTP attempt and is returned as `X-Request-ID`. A replay gets a new trace while retaining the original proposal.
+- Repository results are copied so a caller cannot mutate a stored proposal through a response.
+
+Other classified failures return `403` for denied scope, `422` for invalid input or insufficient evidence, and `503` if a policy is unavailable. Domain errors include the request trace, without echoing the submitted question.
+
+## Structure
+
+```text
+src/data/       Reference architecture content and synthetic trace fixtures
+src/domain/     Frontend action state machine and types
+src/ui/         Walkthrough rendering and interaction controllers
+tests/          Frontend behavior tests
+backend/app/    API, domain models, services, ports and in-memory adapters
+backend/tests/  Domain, concurrency and HTTP tests
+docs/           Architecture, limitations and decision records
+```
+
+## Scope
+
+This case study demonstrates boundaries, not a deployed enterprise agent. State and audit are in memory, are not durable, and are not shared between worker processes. Proposal idempotency does not provide exactly-once external execution. The state-machine helper does not persist approvals or perform compare-and-swap in a database.
+
+Production identity, document-level retrieval controls, a model, MCP transport, persistent state, external execution and telemetry export are extension points described in [Architecture](docs/architecture.md). GitHub Pages publishes only the static walkthrough; CI checks the frontend and backend separately.
+
+MIT license. See [LICENSE](LICENSE).

@@ -13,7 +13,11 @@ app.innerHTML = renderApp();
 
 const showView = (view: ViewId): void => {
   app.querySelectorAll('[data-view-panel]').forEach((panel) => panel.classList.toggle('active', panel.getAttribute('data-view-panel') === view));
-  app.querySelectorAll('[data-view]').forEach((tab) => tab.classList.toggle('active', tab.getAttribute('data-view') === view));
+  app.querySelectorAll('[data-view]').forEach((tab) => {
+    const selected = tab.getAttribute('data-view') === view;
+    tab.classList.toggle('active', selected);
+    tab.setAttribute('aria-pressed', String(selected));
+  });
 };
 
 const modal = new DetailModal(app);
@@ -63,4 +67,9 @@ app.querySelectorAll('[data-action="next-tour"]').forEach((button) => button.add
 app.querySelector('[data-action="reset-tour"]')?.addEventListener('click', () => tour.reset());
 
 const traceRunner = new TraceRunner(app);
-app.querySelector('[data-action="execute"]')?.addEventListener('click', () => void traceRunner.run());
+app.querySelector('[data-action="execute"]')?.addEventListener('click', () => {
+  void traceRunner.run().catch(() => {
+    const status = app.querySelector<HTMLElement>('[data-role="trace-status"]');
+    if (status) status.textContent = 'failed · retry the simulation';
+  });
+});

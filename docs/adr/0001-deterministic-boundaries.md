@@ -1,17 +1,15 @@
-# ADR 0001: Keep business controls outside model reasoning
+# ADR 0001: Keep business controls outside orchestration
 
-**Status:** Accepted
+Status: Accepted
 
 ## Context
 
-The runtime uses probabilistic reasoning for intent and capability selection. Authorization, schema validation, business thresholds and side-effect commitment require repeatability and independent testing.
+An agent may eventually use a model for intent interpretation. Permissions, resource scope, schemas and business thresholds must remain independently testable when that orchestration changes.
 
 ## Decision
 
-The model may propose a structured plan. Deterministic services validate permissions, contracts, policy and state transitions before execution.
+Implement authorization, region scope and policy as ordinary Python services behind typed contracts. Bind tool identity per request. The reference orchestrator is deterministic and uses synthetic adapters; adding a model must not bypass those controls.
 
 ## Consequences
 
-- Models and prompts can change without redefining business authorization.
-- Negative paths can be tested independently from generated language.
-- The runtime contains more explicit services and contracts than a direct model-to-API prototype.
+Negative paths can be tested without a model key or network calls. LangChain stays at the orchestration boundary. MCP transport and model-based routing remain future adapters rather than implied features.

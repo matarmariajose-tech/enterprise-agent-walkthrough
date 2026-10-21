@@ -8,6 +8,7 @@ def proposal() -> ActionProposal:
     return ActionProposal(
         type="publish_operational_alert",
         idempotency_key="test-key",
+        request_fingerprint="a" * 64,
         payload={"region": "LATAM"},
     )
 

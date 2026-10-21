@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import hashlib
+import json
 
 from langchain_core.runnables import Runnable, RunnableLambda
 from opentelemetry import trace
 
-from app.domain.errors import InsufficientEvidenceError
+from app.domain.errors import (
+    AuthorizationError,
+    IdempotencyConflictError,
+    InsufficientEvidenceError,
+)
 from app.domain.models import (
     ActionProposal,
     AgentRequest,
@@ -36,6 +41,8 @@ class AgentOrchestrator:
         *,
         minimum_relevance: float = 0.75,
     ) -> None:
+        if not 0 <= minimum_relevance <= 1:
+            raise ValueError("Minimum relevance must be between zero and one")
         self._retrieval = retrieval
         self._payment_tools = payment_tools
         self._policy = policy
@@ -43,12 +50,24 @@ class AgentOrchestrator:
         self._audit = audit
         self._actions = actions
         self._minimum_relevance = minimum_relevance
-        self.chain: Runnable[
+        self.chain: Runnable[tuple[AgentRequest, ExecutionContext], AgentResponse] = RunnableLambda[
             tuple[AgentRequest, ExecutionContext], AgentResponse
-        ] = RunnableLambda[tuple[AgentRequest, ExecutionContext], AgentResponse](self._run)
+        ](self._run)
 
     async def _run(self, payload: tuple[AgentRequest, ExecutionContext]) -> AgentResponse:
         request, context = payload
+        try:
+            return await self._execute(request, context)
+        except (AuthorizationError, IdempotencyConflictError, InsufficientEvidenceError) as error:
+            await self._audit.record(
+                "agent.request.rejected", context, {"reason": type(error).__name__}
+            )
+            raise
+
+    async def _execute(self, request: AgentRequest, context: ExecutionContext) -> AgentResponse:
+        self._authorization.require(context, Permission.KNOWLEDGE_INTERNAL)
+        self._authorization.require(context, Permission.PAYMENTS_READ)
+        self._authorization.require_region(context, request.region)
         with tracer.start_as_current_span("agent.execute") as span:
             span.set_attribute("agent.trace_id", context.trace_id)
             with tracer.start_as_current_span("retrieval.search"):
@@ -68,11 +87,22 @@ class AgentOrchestrator:
             if self._policy.threshold_exceeded(summary):
                 self._authorization.require(context, Permission.ALERTS_PREPARE)
                 digest = hashlib.sha256(
-                    f"{context.tenant}:{request.correlation_id}:payment-alert".encode()
+                    json.dumps(
+                        [
+                            context.tenant,
+                            context.subject,
+                            str(request.correlation_id),
+                            "payment-alert",
+                        ],
+                        separators=(",", ":"),
+                    ).encode()
                 ).hexdigest()
                 proposal = ActionProposal(
                     type="publish_operational_alert",
                     idempotency_key=digest,
+                    request_fingerprint=hashlib.sha256(
+                        request.model_dump_json(exclude={"correlation_id"}).encode()
+                    ).hexdigest(),
                     payload={
                         "region": request.region,
                         "policy_version": self._policy.version,

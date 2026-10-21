@@ -27,6 +27,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run lint
+      - run: npm test
       - run: npm run build -- --base=/enterprise-agent-walkthrough/
       - uses: actions/configure-pages@v5
         with:

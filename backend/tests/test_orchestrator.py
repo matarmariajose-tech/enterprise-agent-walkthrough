@@ -26,6 +26,7 @@ async def test_proposes_alert_without_executing_side_effect() -> None:
             }
         ),
         trace_id="test-trace",
+        allowed_regions=frozenset({"LATAM"}),
     )
     authorization = AuthorizationService()
     audit = InMemoryAudit()
@@ -61,6 +62,7 @@ async def test_replay_returns_same_action_without_duplicate_side_effect() -> Non
             }
         ),
         trace_id="test-trace",
+        allowed_regions=frozenset({"LATAM"}),
     )
     authorization = AuthorizationService()
     actions = InMemoryActionRepository()

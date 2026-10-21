@@ -1,10 +1,14 @@
 class AuthorizationError(PermissionError):
-    """Raised when the execution context lacks a required permission."""
+    pass
 
 
 class InsufficientEvidenceError(RuntimeError):
-    """Raised when a conclusion cannot be supported by retrieved evidence."""
+    pass
 
 
 class PolicyUnavailableError(RuntimeError):
-    """Raised when a write policy cannot be evaluated safely."""
+    pass
+
+
+class IdempotencyConflictError(ValueError):
+    pass

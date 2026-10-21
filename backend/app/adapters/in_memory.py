@@ -1,5 +1,6 @@
 import asyncio
 
+from app.domain.errors import IdempotencyConflictError
 from app.domain.models import (
     ActionProposal,
     Evidence,
@@ -43,9 +44,7 @@ class InMemoryAudit:
     def __init__(self) -> None:
         self.events: list[tuple[str, str, dict[str, str]]] = []
 
-    async def record(
-        self, event: str, context: ExecutionContext, payload: dict[str, str]
-    ) -> None:
+    async def record(self, event: str, context: ExecutionContext, payload: dict[str, str]) -> None:
         self.events.append((event, context.trace_id, payload))
 
 
@@ -64,6 +63,10 @@ class InMemoryActionRepository:
         async with self._lock:
             existing = self._items.get(proposal.idempotency_key)
             if existing is not None:
-                return existing
-            self._items[proposal.idempotency_key] = proposal
-            return proposal
+                if existing.request_fingerprint != proposal.request_fingerprint:
+                    raise IdempotencyConflictError(
+                        "Correlation ID was already used for a different request"
+                    )
+                return existing.model_copy(deep=True)
+            self._items[proposal.idempotency_key] = proposal.model_copy(deep=True)
+            return proposal.model_copy(deep=True)
